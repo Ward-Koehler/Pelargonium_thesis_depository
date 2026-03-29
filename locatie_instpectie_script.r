@@ -69,6 +69,7 @@ spur_long_linked <- spur_field_only_species %>%
   left_join(location_lib, by = "location_id") %>%
   left_join(species_lib, by = "species_id", suffix = c("", "_from_code"))
 
+View(spur_long_linked)
 # optioneel: check of speciescode overeenkomt met Species-kolom
 mismatch <- spur_long_linked %>%
   filter(!is.na(Species_from_code), Species != Species_from_code)
@@ -87,7 +88,7 @@ if(nrow(mismatch) > 0){
 # =========================
 
 # PAS DEZE KOLOMNAMEN AAN AAN JOUW BESTAND
-
+View(collapsed)
 collapsed_clean <- collapsed %>%
   mutate(
     Species = Species %>%
@@ -115,18 +116,20 @@ collapsed_clean <- collapsed %>%
     latitude  = -(as.numeric(south_deg) + as.numeric(south_min)/60 + as.numeric(south_sec)/3600),
     longitude =  (as.numeric(east_deg) + as.numeric(east_min)/60  + as.numeric(east_sec)/3600)
   ) %>%
-  distinct(Location_name, Species, latitude, longitude)
+  mutate(
+    location_id = match(Location_name, unique(Location_name))
+  ) %>%
+  group_by(Location_name) %>%
+  mutate(
+    row_id_within_location = row_number()
+  ) %>%
+  ungroup() %>%
+  mutate(
+    Location = paste0(location_id, ".", row_id_within_location)
+  ) %>% 
+  distinct(Location_name, Species, latitude, longitude, Location)
 View(collapsed_clean)
 
-collapsed_clean2 <- collapsed_clean %>%
-  left_join(location_lib, by = "Location_name") %>%
-  group_by(location_id) %>%
-  mutate(
-    species_id = match(Species, unique(Species)),
-    Location = as.double(paste0(location_id, ".", species_id))
-  ) %>%
-  ungroup()
-View(collapsed_clean2)
 # =========================
 # 6. Join coördinaten aan long dataset
 # =========================
